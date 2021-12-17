@@ -2,7 +2,6 @@ import redis
 
 
 class Database:
-    db = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
     def set(self, key, value, **kwargs):
         return self.db.set(key, value, **kwargs)

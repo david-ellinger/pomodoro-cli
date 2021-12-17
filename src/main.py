@@ -1,9 +1,9 @@
 import typer
 import time
-from db import Database
+import redis
 
 app = typer.Typer()
-db = Database()
+db = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 db.set("completed_times", 0)
 
 
@@ -23,7 +23,7 @@ def init(
         typer.echo("Not creating")
         raise typer.Abort()
     typer.echo("Creating...")
-    db.set_redis_values(data)
+    set_redis_values(data)
 
 
 @app.command()
@@ -35,7 +35,7 @@ def start():
     incremental_sleep(default_time)
 
     typer.echo("[*] Completed Pomodoro")
-    db.db.incrby("completed_times", 1)
+    db.incrby("completed_times", 1)
     start_rest = typer.confirm("Start rest?")
     if not start_rest:
         typer.echo("Existing...")
@@ -56,16 +56,18 @@ def get_data() -> dict:
         "fourth_time": False,
         "break_time": 0,
     }
-    data["break_time"] = db.db.incrby("short_break", 0)
-    data["default_time"] = db.db.incrby("default_time", 0)
+    data["break_time"] = db.incrby("short_break", 0)
+    data["default_time"] = db.incrby("default_time", 0)
 
-    completed_times = db.db.incry("complted_times", 0)
+    completed_times = db.incry("complted_times", 0)
     if completed_times and completed_times % 4 == 0:
-        data["break_time"] = db.db.incrby("long_break", 0)
+        data["break_time"] = db.incrby("long_break", 0)
         data["fourth_time"] = True
 
     return data
 
+def set_redis_values(data):
+    [db.set(key, data[key]) for key in data.keys()]
 
 if __name__ == "__main__":
     app()
